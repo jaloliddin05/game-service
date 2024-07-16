@@ -4,13 +4,14 @@ import {
   OnGatewayInit,
   SubscribeMessage,
   ConnectedSocket,
+  MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { KahootService } from '../kahoot/kahoot.service';
 
-@WebSocketGateway()
+@WebSocketGateway(3004)
 export class GameGateway implements OnGatewayInit {
-  rooms:{id:number,size:number}[] = []
-  constructor() {}
+  constructor(private readonly kahootService: KahootService) {}
 
   @WebSocketServer()
   server: Server;
@@ -20,24 +21,26 @@ export class GameGateway implements OnGatewayInit {
   }
 
   async handleConnection(@ConnectedSocket() client: Socket) {
+    console.log(client.id);
+    
     this.server.to(client.id).emit('message', 'you connected successfully');
   }
 
-  handleDisconnect(client: any) {
-    this.server.to(client.id).emit('message', 'you disconnected successfully');
-  }
+  handleDisconnect(client: any) {}
 
   @SubscribeMessage('join-game')
-  handleJoinRoom(client: Socket, room: string) {
-    if(this.rooms[this.rooms.length - 1]?.size && this.rooms[this.rooms.length - 1]?.size < 5){
-      client.join(`kahoot${this.rooms[this.rooms.length - 1]?.id}`)
-    }else{
-     this.rooms.push({
-      id: this.rooms[this.rooms.length - 1].id + 1,
-      size:1
-     })
+  async handleJoinGame(@MessageBody() data: { userId: string; level: string,name:string,url:string }, @ConnectedSocket() client: Socket) {
+    const { userId, level,name,url } = data;
+    
+    const room = this.kahootService.joinGame(userId,name,url, level);
+    
+    client.join(room.id);
+    this.server.to(room.id).emit('user-joined', room);
+
+    if (room.users.length === 2) {
+      const quiz = await this.kahootService.generateQuizzes(level,20)   
+      this.server.to(room.id).emit('start-game',{quiz,room: room.id});
     }
-    client.join(room);
   }
 
   @SubscribeMessage('leave-game')

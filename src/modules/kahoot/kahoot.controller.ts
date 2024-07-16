@@ -2,14 +2,15 @@ import { Controller, Get, Query } from '@nestjs/common';
 
 import { CreateKahootDto, UpdateKahootDto } from './dto';
 import { KahootService } from './kahoot.service';
+import { MessagePattern } from '@nestjs/microservices';
 
 @Controller('kahoot')
 export class KahootController {
   constructor(private readonly kahootService: KahootService) {}
 
-  @Get('')
-  async getOne(@Query('lvl') lvl:string,@Query('count') count:string) {
-    return await this.kahootService.generateQuizzes(lvl,count);
+  @MessagePattern({ cmd: 'game_kahoot_get_quiz' })
+  async getQuiz() {
+    // return await this.kahootService.generateQuizzes(lvl,count);
   }
 
   // async saveData() {

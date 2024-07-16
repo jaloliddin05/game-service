@@ -7,20 +7,28 @@ import { Kahoot } from './kahoot.entity';
 import { CreateKahootDto, UpdateKahootDto } from './dto';
 import { fetchData } from 'src/infra/helper';
 
+interface Room {
+  id: string;
+  users: {id:string,name:string,url:string}[];
+  level: string;
+}
+
 Injectable();
 export class KahootService {
+  private rooms: Room[] = [];
+
   constructor(
     @InjectRepository(Kahoot)
     private readonly kahootRepository: Repository<Kahoot>,
   ) {}
 
-  async generateQuizzes(lvl: string, count: string) {
+  async generateQuizzes(lvl: string, count: number) {
     const words = await this.getRandomWords(lvl, count);
     const quizzes = this.createQuizzes(words);
     return quizzes;
   }
 
-  async getRandomWords(lvl: string, count: string) {
+  async getRandomWords(lvl: string, count: number) {
     const data = await fetchData(`
       SELECT word, description
       FROM perfectly_dictionary
@@ -64,5 +72,22 @@ export class KahootService {
   async create(value: CreateKahootDto) {
     const data = this.kahootRepository.create(value);
     return await this.kahootRepository.save(data);
+  }
+
+  joinGame(id: string,name:string,url:string, level: string): Room {
+    let room = this.rooms.find(r => r.level === level && r.users.length < 5);
+
+    if (!room) {
+      room = { id: `${level}-${Date.now()}`, users: [], level };
+      this.rooms.push(room);
+    }
+
+    room.users.push({id,name,url});
+
+    return room;
+  }
+
+  deleteGameRoom(id:string){
+    this.rooms = this.rooms.filter(r=> r.id != id)
   }
 }
