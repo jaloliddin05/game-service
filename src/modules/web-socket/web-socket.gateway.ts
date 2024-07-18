@@ -38,9 +38,20 @@ export class GameGateway implements OnGatewayInit {
     this.server.to(room.id).emit('user-joined', room);
 
     if (room.users.length === 2) {
-      const quiz = await this.kahootService.generateQuizzes(level,20)   
+      const quiz = await this.kahootService.generateQuizzes(level,80)   
       this.server.to(room.id).emit('start-game',{quiz,room: room.id});
     }
+  }
+
+  @SubscribeMessage('send-round-results')
+  async sendRoundResults(@MessageBody() data: {room:string,id:string,score:number,round:number }, @ConnectedSocket() client: Socket) {
+    const room = this.kahootService.changeRoomResult(data.room,data.id,data.score)
+  }
+
+  @SubscribeMessage('get-round-results')
+  async getRoundResults(@MessageBody() data: {room:string}, @ConnectedSocket() client: Socket) {
+    const room = this.kahootService.getRoom(data.room)
+    this.server.emit('receive-get-round-result',room.result)
   }
 
   @SubscribeMessage('leave-game')

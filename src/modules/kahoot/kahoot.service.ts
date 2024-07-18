@@ -4,13 +4,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Kahoot } from './kahoot.entity';
-import { CreateKahootDto, UpdateKahootDto } from './dto';
 import { fetchData } from 'src/infra/helper';
 
 interface Room {
   id: string;
-  users: {id:string,name:string,url:string}[];
+  users: { id: string; name: string; url: string }[];
   level: string;
+  date: Date;
+  result: {
+    id: string;
+    score: number;
+  }[];
+  currentResult?: any
 }
 
 Injectable();
@@ -29,7 +34,8 @@ export class KahootService {
   }
 
   async getRandomWords(lvl: string, count: number) {
-    const data = await fetchData(`
+    const data = await fetchData(
+      `
       SELECT word, description
       FROM perfectly_dictionary
       ORDER BY RANDOM()
@@ -64,30 +70,61 @@ export class KahootService {
     return response;
   }
 
-  async change(value: UpdateKahootDto, id: string) {
+  async change(value, id: string) {
     const response = await this.kahootRepository.update({ id }, value);
     return response;
   }
 
-  async create(value: CreateKahootDto) {
-    const data = this.kahootRepository.create(value);
+  async create(value:Room) {
+    const players = value.users.map(u=>u.id)
+    const result = []
+    value.result.forEach((r,i)=>{
+       result.push({
+        id: r.id,
+        score:r.score,
+        name: value.users[i].name,
+        url:value.users[i].url,
+        win:r.score > 15
+       })
+    })
+
+    const data = this.kahootRepository.create({players,result});
     return await this.kahootRepository.save(data);
   }
 
-  joinGame(id: string,name:string,url:string, level: string): Room {
-    let room = this.rooms.find(r => r.level === level && r.users.length < 5);
+  joinGame(id: string, name: string, url: string, level: string): Room {
+    let room = this.rooms.find((r) => r.level === level && r.users.length < 5);
 
     if (!room) {
-      room = { id: `${level}-${Date.now()}`, users: [], level };
+      room = {
+        id: `${level}-${Date.now()}`,
+        users: [],
+        level,
+        result: [],
+        date: new Date(),
+      };
       this.rooms.push(room);
     }
 
-    room.users.push({id,name,url});
+    room.users.push({ id, name, url });
+    room.result.push({ id, score: 0 });
+    room.currentResult = {}
 
     return room;
   }
 
-  deleteGameRoom(id:string){
-    this.rooms = this.rooms.filter(r=> r.id != id)
+  changeRoomResult(roomId: string, id: string, score: number) {
+    const room = this.rooms.find((r) => r.id == roomId);
+    room.result.find((r) => r.id == id).score += score;
+    room.currentResult[id] = score
+    return room;
+  }
+
+  getRoom(roomId: string) {
+    return  this.rooms.find((r) => r.id == roomId)
+  }
+
+  deleteGameRoom(id: string) {
+    this.rooms = this.rooms.filter((r) => r.id != id);
   }
 }

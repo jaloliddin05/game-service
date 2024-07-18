@@ -1,6 +1,5 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 
-import { CreateKahootDto, UpdateKahootDto } from './dto';
 import { KahootService } from './kahoot.service';
 import { MessagePattern } from '@nestjs/microservices';
 

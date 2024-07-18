@@ -1,0 +1,1 @@
+export {default as JoinColumn} from './text-json.transformer'
