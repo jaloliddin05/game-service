@@ -124,6 +124,14 @@ export class KahootService {
     return  this.rooms.find((r) => r.id == roomId)
   }
 
+  leftRoom(roomId:string,userId:string){    
+    const room = this.rooms.find((r) => r.id == roomId);
+    if(!room) return
+    room.users = room.users.filter(u=>u.id != userId)
+    room.result = room.result.filter(r=>r.id != userId)
+    return room
+  }
+
   deleteGameRoom(id: string) {
     this.rooms = this.rooms.filter((r) => r.id != id);
   }
