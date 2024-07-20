@@ -16,8 +16,8 @@ interface Room {
     score: number;
   }[];
   currentResult?: any
+  isStarted:boolean
 }
-
 Injectable();
 export class KahootService {
   private rooms: Room[] = [];
@@ -93,7 +93,7 @@ export class KahootService {
   }
 
   joinGame(id: string, name: string, url: string, level: string): Room {
-    let room = this.rooms.find((r) => r.level === level && r.users.length < 5);
+    let room = this.rooms.find((r) => r.level === level && r.users.length < 5 && !r.isStarted);
 
     if (!room) {
       room = {
@@ -102,10 +102,11 @@ export class KahootService {
         level,
         result: [],
         date: new Date(),
+        isStarted:false
       };
       this.rooms.push(room);
     }
-
+    
     room.users.push({ id, name, url });
     room.result.push({ id, score: 0 });
     room.currentResult = {}
@@ -113,11 +114,17 @@ export class KahootService {
     return room;
   }
 
-  changeRoomResult(roomId: string, id: string, score: number) {
+  changeRoomResult(roomId: string, userId: string, score: number) {
     const room = this.rooms.find((r) => r.id == roomId);
-    room.result.find((r) => r.id == id).score += score;
-    room.currentResult[id] = score
+    room.result.find((r) => r.id == userId).score += score;
+    room.currentResult[userId] = score
     return room;
+  }
+
+  startGame(roomId:string){
+    const room = this.rooms.find((r) => r.id == roomId);
+    room.isStarted = true
+    return room
   }
 
   getRoom(roomId: string) {
