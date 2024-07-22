@@ -88,11 +88,16 @@ export class GameGateway implements OnGatewayInit {
 
   @SubscribeMessage('get-round-result')
   async getRoundResults(
-    @MessageBody() data: { roomId: string },
+    @MessageBody() data: { roomId: string,lastRound:boolean },
     @ConnectedSocket() client: Socket,
   ) {    
     const room = this.kahootService.getRoom(data.roomId);
     this.server.to(data.roomId).emit('receive-get-round-result', room.currentResult);
+    if(data.lastRound){
+      const room = this.kahootService.getRoom(data.roomId)
+      await this.kahootService.create(room)
+      this.kahootService.deleteGameRoom(data.roomId)
+    }
   }
 
 }
