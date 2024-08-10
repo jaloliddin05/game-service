@@ -31,12 +31,14 @@ export class GameGateway implements OnGatewayInit {
   @SubscribeMessage('join-game')
   async handleJoinGame(
     @MessageBody()
-    data: { userId: string; level: string; name: string; url: string},
+    data: { userId: string; level: string; name: string; url: string,range:number},
     @ConnectedSocket() client: Socket,
   ) {
-    const {  userId, level, name, url  } = data;
+    console.log('join-game',data);
     
-    const room = this.kahootService.joinGame(userId, name, url, level);
+    const {  userId, level, name, url,range  } = data;
+    
+    const room = this.kahootService.joinGame(userId, name, url, level,range);
 
     client.join(room.id);
     this.server.to(room.id).emit('user-joined', room);
@@ -54,6 +56,8 @@ export class GameGateway implements OnGatewayInit {
     data: { userId: string; roomId:string },
     @ConnectedSocket() client: Socket,
   ) {    
+    console.log('left-room',data);
+    
     const { userId, roomId } = data;
     
     const room = this.kahootService.leftRoom(roomId,userId);
@@ -67,6 +71,8 @@ export class GameGateway implements OnGatewayInit {
     @MessageBody() data: {  roomId:string },
     @ConnectedSocket() client: Socket,
   ) {
+    console.log('left-game',data);
+    
     client.leave(data.roomId);
   }
 
@@ -75,24 +81,32 @@ export class GameGateway implements OnGatewayInit {
     @MessageBody() data: { roomId: string; level: string },
     @ConnectedSocket() client: Socket,
   ) {
+    console.log('request-start-game',data);
+    
     const { roomId, level } = data;
     this.kahootService.startGame(roomId)
-    const quiz = await this.kahootService.generateQuizzes(level, 20);    
-    this.server.to(roomId).emit('start-game', quiz );
+    const quiz = await this.kahootService.generateQuizzes(level, 20);     
+      
+    this.server.to(roomId).emit('start-game', quiz )
   }
 
   @SubscribeMessage('send-round-result')
-  async sendRoundResults(@MessageBody() { roomId, userId, score,word }, @ConnectedSocket() client: Socket) {    
-    this.kahootService.changeRoomResult( roomId,userId,score,);
+  async sendRoundResults(@MessageBody() { roomId, userId, score,word,time }, @ConnectedSocket() client: Socket) {   
+    console.log('send-round-result',{ roomId, userId, score,word,time });
+    this.kahootService.changeRoomResult( roomId,userId,score,time,word);
   }
 
   @SubscribeMessage('get-round-result')
   async getRoundResults(
-    @MessageBody() data: { roomId: string,lastRound:boolean },
-    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string,lastRound:boolean,correctAnswer:string },
+    @ConnectedSocket() client: Socket
   ) {    
-    const room = this.kahootService.getRoom(data.roomId);
-    this.server.to(data.roomId).emit('receive-get-round-result', room.currentResult);
+    console.log('get-round-result',data)
+    
+    const room = this.kahootService.getRoom(data.roomId)
+    console.log(room.currentResult);
+    
+    this.server.to(data.roomId).emit('receive-get-round-result', {data:room.currentResult,correctAnswer:data.correctAnswer});
     if(data.lastRound){
       const room = this.kahootService.getRoom(data.roomId)
       await this.kahootService.create(room)

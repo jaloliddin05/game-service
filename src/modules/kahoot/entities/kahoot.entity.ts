@@ -7,17 +7,17 @@ export class Kahoot {
   id: string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  date:string
+  date: string;
 
-  @Column("text", { array: true })
-  players:string[]
+  @Column('text', { array: true })
+  players: string[];
 
   @Column({ type: 'text', transformer: new JsonColumn(), nullable: true })
   result: {
-    id:string,
-    score:number,
-    name:string,
-    url:string,
-    win:boolean
-  }[]
+    id: string;
+    score: number;
+    name: string;
+    url: string;
+    win: boolean;
+  }[];
 }
