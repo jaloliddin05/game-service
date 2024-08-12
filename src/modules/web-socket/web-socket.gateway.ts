@@ -109,7 +109,8 @@ export class GameGateway implements OnGatewayInit {
     this.server.to(data.roomId).emit('receive-get-round-result', {data:room.currentResult,correctAnswer:data.correctAnswer});
     if(data.lastRound){
       const room = this.kahootService.getRoom(data.roomId)
-      await this.kahootService.create(room)
+      const res = await this.kahootService.create(room)
+      this.server.to(data.roomId).emit("game-result",res)
       this.kahootService.deleteGameRoom(data.roomId)
     }
   }

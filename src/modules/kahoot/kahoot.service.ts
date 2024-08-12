@@ -32,9 +32,7 @@ export class KahootService {
     private readonly kahootRatingRepository: Repository<KahootRating>,
   ) {}
 
-  async getUserKahoot(user:string){
-    console.log(user);
-    
+  async getUserKahoot(user:string){    
     const data = await this.kahootRatingRepository.findOne({
       where:{user}
     })
@@ -48,21 +46,22 @@ export class KahootService {
   async create(value: Room) {
     const players = value.users.map((u) => u.id);
     const result = [];
+    const ratingResult = await this.changeRating(value.result)
     await Promise.all(
-      value.result.map(async (r, i) => {
+      ratingResult.map(async (r, i) => {
         result.push({
           id: r.id,
           score: r.score,
           name: value.users[i].name,
           url: value.users[i].url,
-          win: r.score > 15,
+          win: i < 3
         });
       }),
     );
 
     const data = this.kahootRepository.create({ players, result });
     await this.kahootRepository.save(data);
-    await this.changeRating(value.result)
+    return ratingResult
   }
   async changeRating(data: { id: string; score: number; time: number }[]) {
     const ballMap = {
@@ -73,7 +72,7 @@ export class KahootService {
     };
 
     data.sort((a, b) => b.score - a.score || a.time - b.time);
-
+    const res = []
     await Promise.all(
       data.map(async (d, i) => {
         if (i < 3) {
@@ -82,11 +81,14 @@ export class KahootService {
         await this.kahootRatingRepository
           .createQueryBuilder()
           .update(KahootRating)
-          .set({ xp: () => `xp + ${ballMap[d.score]}` })
+          .set({ xp: () => `GREATEST(xp + ${ballMap[d.score]}, 0)` })
           .where('user = :user', { user: d.id })
           .execute();
+
+          res.push({...d,ball:ballMap[d.score]})
       }),
     );
+    return res
   }
   //--------------------------------------------------------
 
